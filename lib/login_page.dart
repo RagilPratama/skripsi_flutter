@@ -10,14 +10,14 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -27,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _isLoading = true);
 
       final success = await AuthService().login(
-        _emailController.text.trim(),
+        _usernameController.text.trim(),
         _passwordController.text.trim(),
       );
 
@@ -82,7 +82,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 // Username Field
                 TextFormField(
-                  controller: _emailController,
+                  controller: _usernameController,
                   decoration: InputDecoration(
                     labelText: 'Username',
                     prefixIcon: const Icon(Icons.person),
