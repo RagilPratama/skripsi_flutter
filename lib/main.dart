@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import 'dart:async';
+import 'routes.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,7 +18,8 @@ class MyApp extends StatelessWidget {
           seedColor: const Color.fromARGB(255, 221, 178, 22),
         ),
       ),
-      home: const SplashScreen(),
+      initialRoute: AppRoutes.splash,
+      onGenerateRoute: AppRoutes.generateRoute,
     );
   }
 }
@@ -35,11 +36,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     Timer(const Duration(seconds: 3), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => MyHomePage(title: 'Dimsum Gerobak'),
-        ),
-      );
+      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
     });
   }
 
@@ -55,7 +52,11 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 20),
             const Text(
               'Welcome to SAW Method App',
-              style: TextStyle(fontSize: 24, color: Colors.white),
+              style: TextStyle(fontSize: 24, color: Colors.black),
+            ),
+            const SizedBox(height: 10),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.amber),
             ),
           ],
         ),
