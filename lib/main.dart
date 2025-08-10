@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'routes.dart';
+import 'auth_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthService().init();
   runApp(const MyApp());
 }
 
@@ -76,12 +79,29 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
+  String? _username;
 
-  static const List<Widget> _widgetOptions = <Widget>[
-    Text('Home Page'),
-    Text('Favorite'),
-    Text('Profile'),
+  final List<Widget> _widgetOptions = [
+    _buildHomeContent(),
+    const Center(child: Text('Halaman Dimsum')),
+    const Center(child: Text('Halaman Kriteria')),
+    const Center(child: Text('Halaman Normalisasi')),
+    const Center(child: Text('Halaman Laporan')),
+    const Center(child: Text('Halaman Profile')),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final username = AuthService().username;
+    setState(() {
+      _username = username;
+    });
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -89,41 +109,66 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  static Widget _buildHomeContent() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Selamat Datang di Aplikasi SAW',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 20),
+          Text(
+            'Home Page',
+            style: TextStyle(fontSize: 18, color: Colors.black),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: Text(_username != null ? 'Hallo, $_username' : 'Hallo'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(context).pushNamed(AppRoutes.profile);
+            },
+          ),
+        ],
       ),
-      body: Center(
-        child: _selectedIndex == 0
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  const Text(
-                    'Home Page',
-                    style: TextStyle(fontSize: 24, color: Colors.black),
-                    textAlign: null,
-                    textDirection: null,
-                  ),
-                ],
-              )
-            : _widgetOptions[_selectedIndex],
-      ),
+      body: _widgetOptions[_selectedIndex],
 
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Favorite',
+            icon: Icon(Icons.restaurant),
+            label: 'Dimsum',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list_alt),
+            label: 'Kriteria',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calculate),
+            label: 'Normalisasi',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.description),
+            label: 'Laporan',
+          ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: const Color.fromARGB(255, 226, 191, 18),
         onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
       ),
     );
   }

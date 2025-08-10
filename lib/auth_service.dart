@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'config/api_config.dart';
+import 'services/storage_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -15,6 +16,15 @@ class AuthService {
   String? get token => _token;
   String? get username => _username;
 
+  // Get username as Future for async operations
+  Future<String?> get usernameAsync async => _username;
+
+  // Initialize auth state from shared preferences
+  Future<void> init() async {
+    _username = await StorageService.getUsername();
+    _isLoggedIn = _username != null;
+  }
+
   Future<bool> login(String username, String password) async {
     try {
       final response = await http.post(
@@ -26,6 +36,10 @@ class AuthService {
       if (response.statusCode == 201) {
         _username = username;
         _isLoggedIn = true;
+
+        // Save username to shared preferences
+        await StorageService.saveUsername(username);
+
         return true;
       } else {
         final error = jsonDecode(response.body);
@@ -42,5 +56,8 @@ class AuthService {
     _token = null;
     _username = null;
     _isLoggedIn = false;
+
+    // Remove username from shared preferences
+    await StorageService.removeUsername();
   }
 }
