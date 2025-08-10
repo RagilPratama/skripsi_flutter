@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'routes.dart';
 import 'auth_service.dart';
+import 'dimsum_form.dart';
+import 'kriteria_form.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,9 +84,24 @@ class _MyHomePageState extends State<MyHomePage> {
   String? _username;
 
   final List<Widget> _widgetOptions = [
-    _buildHomeContent(),
-    const Center(child: Text('Halaman Dimsum')),
-    const Center(child: Text('Halaman Kriteria')),
+    const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Selamat Datang di Aplikasi SAW',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 20),
+          Text(
+            'Home Page',
+            style: TextStyle(fontSize: 18, color: Colors.black),
+          ),
+        ],
+      ),
+    ),
+    const DimsumForm(),
+    const KriteriaForm(),
     const Center(child: Text('Halaman Normalisasi')),
     const Center(child: Text('Halaman Laporan')),
     const Center(child: Text('Halaman Profile')),
@@ -109,18 +126,20 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  static Widget _buildHomeContent() {
+  static Widget _buildDimsumContent() {
     return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Icon(Icons.restaurant, size: 100, color: Colors.amber),
+          SizedBox(height: 20),
           Text(
-            'Selamat Datang di Aplikasi SAW',
+            'Halaman Dimsum',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 20),
           Text(
-            'Home Page',
+            'Daftar Dimsum Tersedia',
             style: TextStyle(fontSize: 18, color: Colors.black),
           ),
         ],
