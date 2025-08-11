@@ -102,7 +102,7 @@ class _KriteriaFormState extends State<KriteriaForm> {
         _loadKriteriaData();
         _showSuccess('Kriteria deleted successfully');
       } else {
-        _showError('Failed to delete kriteria');
+        _showError('Kriteria tidak dapat dihapus karena masih digunakan');
       }
     } catch (e) {
       _showError('Error deleting kriteria: $e');
@@ -216,6 +216,7 @@ class _KriteriaFormState extends State<KriteriaForm> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _kriteriaList.length,
                     itemBuilder: (context, index) {
+                      final id = _kriteriaList[index]['id'];
                       return Card(
                         child: ListTile(
                           title: Text(_kriteriaList[index]['criteria_name']),
@@ -229,10 +230,11 @@ class _KriteriaFormState extends State<KriteriaForm> {
                                 icon: const Icon(Icons.edit),
                                 onPressed: () => _editKriteria(index),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () => _deleteKriteria(index),
-                              ),
+                              if (![1, 2, 3].contains(id))
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () => _deleteKriteria(index),
+                                ),
                             ],
                           ),
                         ),
