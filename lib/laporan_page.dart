@@ -1,66 +1,99 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:pdf/widgets.dart' as pw;
 
-class LaporanPage extends StatelessWidget {
-  const LaporanPage({Key? key}) : super(key: key);
+class LaporanPage extends StatefulWidget {
+  const LaporanPage({super.key});
 
-  void _onButtonPressed(BuildContext context, String label) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Tombol "$label" ditekan')));
-  }
+  @override
+  State<LaporanPage> createState() => _LaporanPageState();
+}
 
-  Widget _buildButton(
-    BuildContext context,
-    String label,
-    IconData icon,
-    Color color,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: 8.0,
-      ), // padding antar tombol
-      child: ElevatedButton.icon(
-        icon: Icon(icon, color: Colors.white),
-        label: Text(label, style: const TextStyle(color: Colors.white)),
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 50),
-          backgroundColor: color,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+class _LaporanPageState extends State<LaporanPage> {
+  Future<void> _savePdfToDownloads() async {
+    try {
+      if (Platform.isAndroid) {
+        await _handleAndroidPermissions();
+      }
+
+      final pdf = pw.Document();
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) => pw.Center(
+            child: pw.Text('Hello PDF!', style: pw.TextStyle(fontSize: 40)),
           ),
         ),
-        onPressed: () => _onButtonPressed(context, label),
-      ),
-    );
+      );
+
+      final downloadsPath = "/storage/emulated/0/Download";
+      final filePath =
+          '$downloadsPath/laporan_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File(filePath);
+
+      await file.writeAsBytes(await pdf.save());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF berhasil disimpan di Downloads: $filePath'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _handleAndroidPermissions() async {
+    if (Platform.isAndroid) {
+      final androidVersion = await _getAndroidVersion();
+
+      if (androidVersion >= 30) {
+        var manageStatus = await Permission.manageExternalStorage.status;
+        if (!manageStatus.isGranted) {
+          manageStatus = await Permission.manageExternalStorage.request();
+          if (!manageStatus.isGranted) {
+            throw Exception("Izin Manage External Storage ditolak");
+          }
+        }
+      } else {
+        var storageStatus = await Permission.storage.status;
+        if (!storageStatus.isGranted) {
+          storageStatus = await Permission.storage.request();
+          if (!storageStatus.isGranted) {
+            throw Exception("Izin penyimpanan ditolak");
+          }
+        }
+      }
+    }
+  }
+
+  Future<int> _getAndroidVersion() async {
+    try {
+      final file = File("/system/build.prop");
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final match = RegExp(r'ro.build.version.sdk=(\d+)').firstMatch(content);
+        if (match != null) {
+          return int.parse(match.group(1)!);
+        }
+      }
+    } catch (_) {}
+    return 30; // default
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildButton(
-              context,
-              'Export Data Dimsum',
-              Icons.picture_as_pdf,
-              Color.fromRGBO(243, 197, 60, 1),
-            ),
-            _buildButton(
-              context,
-              'Export Data Kriteria',
-              Icons.picture_as_pdf,
-              Color.fromRGBO(243, 197, 60, 1),
-            ),
-            _buildButton(
-              context,
-              'Export Data SAW',
-              Icons.picture_as_pdf,
-              Color.fromRGBO(243, 197, 60, 1),
-            ),
-          ],
+      body: Center(
+        child: ElevatedButton(
+          onPressed: _savePdfToDownloads,
+          child: const Text("Download Laporan Dimsum PDF"),
         ),
       ),
     );
