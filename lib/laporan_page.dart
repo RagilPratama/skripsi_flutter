@@ -16,9 +16,12 @@ class LaporanPage extends StatefulWidget {
 class _LaporanPageState extends State<LaporanPage> {
   bool _isLoading = false;
   String? _username;
+
   final String apiDimsum = 'https://bb3e9ca8413f.ngrok-free.app/dimsum-variant';
   final String apiCriteria =
       'https://bb3e9ca8413f.ngrok-free.app/criteria-weight';
+  final String apiNilaiAkhir =
+      'https://bb3e9ca8413f.ngrok-free.app/nilai-awal/result-saw';
 
   @override
   void initState() {
@@ -91,6 +94,122 @@ class _LaporanPageState extends State<LaporanPage> {
       ],
       filePrefix: "laporan_kriteria",
     );
+  }
+
+  Future<void> _downloadNilaiAkhirReport() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.get(Uri.parse(apiNilaiAkhir));
+      if (response.statusCode != 200) {
+        throw Exception('Gagal mengambil data');
+      }
+
+      List<dynamic> dataList = json.decode(response.body);
+
+      // Urutkan berdasarkan nilai tertinggi
+      dataList.sort((a, b) => (b['nilai'] as num).compareTo(a['nilai'] as num));
+
+      if (Platform.isAndroid) {
+        await _handleAndroidPermissions();
+      }
+
+      final pdf = pw.Document();
+      final now = DateTime.now();
+      final hari = _getHariIndonesia(now);
+      final tanggal = '${now.day} ${_getBulanIndonesia(now.month)} ${now.year}';
+
+      pdf.addPage(
+        pw.MultiPage(
+          footer: (pw.Context context) {
+            return pw.Container(
+              alignment: pw.Alignment.centerRight,
+              margin: const pw.EdgeInsets.only(top: 50),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Text('Bogor, $hari $tanggal'),
+                  pw.SizedBox(height: 65),
+                  pw.Text(_username ?? ''),
+                ],
+              ),
+            );
+          },
+          build: (pw.Context context) => [
+            pw.Header(
+              level: 0,
+              child: pw.Text(
+                "Laporan Nilai Akhir",
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              'Dibuat : ${now.toString()}',
+              style: const pw.TextStyle(fontSize: 12),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Table.fromTextArray(
+              headers: ['No', 'Nama', 'Nilai Akhir'],
+              data: List<List<String>>.generate(
+                dataList.length,
+                (i) => [
+                  (i + 1).toString(),
+                  dataList[i]['nama'].toString(),
+                  (dataList[i]['nilai'] as num).toStringAsFixed(
+                    3,
+                  ), // Bulatkan 3 desimal
+                ],
+              ),
+              border: pw.TableBorder.all(),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.centerLeft,
+            ),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              "Data ini diurutkan sesuai nilai akhir",
+              style: pw.TextStyle(fontSize: 12, fontStyle: pw.FontStyle.italic),
+            ),
+          ],
+        ),
+      );
+
+      final downloadsPath = "/storage/emulated/0/Download";
+      final fileName = 'laporan_nilai_akhir_${now.millisecondsSinceEpoch}.pdf';
+      final filePath = '$downloadsPath/$fileName';
+      final file = File(filePath);
+
+      await file.writeAsBytes(await pdf.save());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Laporan berhasil diunduh: $fileName'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _generatePdfReport({
@@ -211,15 +330,17 @@ class _LaporanPageState extends State<LaporanPage> {
         var manageStatus = await Permission.manageExternalStorage.status;
         if (!manageStatus.isGranted) {
           manageStatus = await Permission.manageExternalStorage.request();
-          if (!manageStatus.isGranted)
+          if (!manageStatus.isGranted) {
             throw Exception("Izin Manage External Storage ditolak");
+          }
         }
       } else {
         var storageStatus = await Permission.storage.status;
         if (!storageStatus.isGranted) {
           storageStatus = await Permission.storage.request();
-          if (!storageStatus.isGranted)
+          if (!storageStatus.isGranted) {
             throw Exception("Izin penyimpanan ditolak");
+          }
         }
       }
     }
@@ -281,6 +402,22 @@ class _LaporanPageState extends State<LaporanPage> {
                     ),
                     child: const Text(
                       "Download Laporan Kriteria PDF",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _downloadNilaiAkhirReport,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 30,
+                        vertical: 15,
+                      ),
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text(
+                      "Download Laporan Nilai Akhir PDF",
                       style: TextStyle(fontSize: 16),
                     ),
                   ),
