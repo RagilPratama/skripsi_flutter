@@ -5,6 +5,7 @@ import 'auth_service.dart';
 import 'dimsum_form.dart';
 import 'kriteria_form.dart';
 import 'normalisasi_form.dart';
+import 'laporan_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,7 +105,7 @@ class _MyHomePageState extends State<MyHomePage> {
     const DimsumForm(),
     const KriteriaForm(),
     const NormalisasiForm(),
-    const Center(child: Text('Halaman Laporan')),
+    const LaporanPage(),
     const Center(child: Text('Halaman Profile')),
   ];
 

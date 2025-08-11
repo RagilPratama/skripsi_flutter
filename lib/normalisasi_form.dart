@@ -25,11 +25,11 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
   bool _isLoadingKriteria = true;
 
   final String normalisasiApiUrl =
-      'https://d6b5cc039c48.ngrok-free.app/nilai-awal';
+      'https://bb3e9ca8413f.ngrok-free.app/nilai-awal';
   final String produkApiUrl =
-      'https://d6b5cc039c48.ngrok-free.app/dimsum-variant';
+      'https://bb3e9ca8413f.ngrok-free.app/dimsum-variant';
   final String kriteriaApiUrl =
-      'https://d6b5cc039c48.ngrok-free.app/criteria-weight';
+      'https://bb3e9ca8413f.ngrok-free.app/criteria-weight';
 
   @override
   void initState() {

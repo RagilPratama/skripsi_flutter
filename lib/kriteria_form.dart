@@ -17,7 +17,7 @@ class _KriteriaFormState extends State<KriteriaForm> {
   List<Map<String, dynamic>> _kriteriaList = [];
   bool _isLoading = true;
 
-  final String apiUrl = 'https://d6b5cc039c48.ngrok-free.app/criteria-weight';
+  final String apiUrl = 'https://bb3e9ca8413f.ngrok-free.app/criteria-weight';
 
   @override
   void initState() {

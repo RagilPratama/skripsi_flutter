@@ -18,7 +18,7 @@ class _DimsumFormState extends State<DimsumForm> {
   List<Map<String, dynamic>> _dimsumList = [];
   bool _isLoading = true;
 
-  final String apiUrl = 'https://d6b5cc039c48.ngrok-free.app/dimsum-variant';
+  final String apiUrl = 'https://bb3e9ca8413f.ngrok-free.app/dimsum-variant';
 
   @override
   void initState() {
