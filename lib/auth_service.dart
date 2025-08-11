@@ -43,11 +43,9 @@ class AuthService {
         return true;
       } else {
         final error = jsonDecode(response.body);
-        print('Login failed: ${error['message'] ?? response.body}');
         return false;
       }
     } catch (e) {
-      print('Network error: $e');
       return false;
     }
   }

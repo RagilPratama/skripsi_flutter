@@ -104,7 +104,7 @@ class _DimsumFormState extends State<DimsumForm> {
         _loadDimsumData();
         _showSuccess('Dimsum deleted successfully');
       } else {
-        _showError('Failed to delete dimsum');
+        _showError('Produk terdafatar pada normalisasi tidak dapat dihapus');
       }
     } catch (e) {
       _showError('Error deleting dimsum: $e');
