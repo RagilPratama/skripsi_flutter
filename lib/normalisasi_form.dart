@@ -20,9 +20,15 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
   List<Map<String, dynamic>> _kriteriaList = [];
   List<Map<String, dynamic>> _normalisasiList = [];
 
+  List<Map<String, dynamic>> _normalisasiOriginalList = [];
+
   bool _isLoading = true;
   bool _isLoadingProduk = true;
   bool _isLoadingKriteria = true;
+  bool _isLoadingOriginal = true;
+
+  // Filter nama produk untuk tabel
+  String? _filterProdukName;
 
   final String normalisasiApiUrl =
       'https://bb3e9ca8413f.ngrok-free.app/nilai-awal';
@@ -30,6 +36,8 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
       'https://bb3e9ca8413f.ngrok-free.app/dimsum-variant';
   final String kriteriaApiUrl =
       'https://bb3e9ca8413f.ngrok-free.app/criteria-weight';
+  final String normalisasiOriginalApiUrl =
+      'https://bb3e9ca8413f.ngrok-free.app/nilai-awal/original';
 
   @override
   void initState() {
@@ -42,6 +50,7 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
       _loadProdukData(),
       _loadKriteriaData(),
       _loadNormalisasiData(),
+      _loadNormalisasiOriginalData(),
     ]);
   }
 
@@ -55,10 +64,13 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
           );
           _isLoadingProduk = false;
         });
+      } else {
+        setState(() => _isLoadingProduk = false);
+        _showError('Gagal load data produk');
       }
     } catch (e) {
       setState(() => _isLoadingProduk = false);
-      _showError('Failed to load produk: $e');
+      _showError('Error load produk: $e');
     }
   }
 
@@ -72,10 +84,13 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
           );
           _isLoadingKriteria = false;
         });
+      } else {
+        setState(() => _isLoadingKriteria = false);
+        _showError('Gagal load data kriteria');
       }
     } catch (e) {
       setState(() => _isLoadingKriteria = false);
-      _showError('Failed to load kriteria: $e');
+      _showError('Error load kriteria: $e');
     }
   }
 
@@ -89,10 +104,33 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
           );
           _isLoading = false;
         });
+      } else {
+        setState(() => _isLoading = false);
+        _showError('Gagal load data normalisasi');
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      _showError('Failed to load normalisasi: $e');
+      _showError('Error load normalisasi: $e');
+    }
+  }
+
+  Future<void> _loadNormalisasiOriginalData() async {
+    try {
+      final response = await http.get(Uri.parse(normalisasiOriginalApiUrl));
+      if (response.statusCode == 200) {
+        setState(() {
+          _normalisasiOriginalList = List<Map<String, dynamic>>.from(
+            json.decode(response.body),
+          );
+          _isLoadingOriginal = false;
+        });
+      } else {
+        setState(() => _isLoadingOriginal = false);
+        _showError('Gagal load data normalisasi original');
+      }
+    } catch (e) {
+      setState(() => _isLoadingOriginal = false);
+      _showError('Error load data normalisasi original: $e');
     }
   }
 
@@ -131,6 +169,7 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
     _nilaiController.clear();
     _selectedProdukId = null;
     _selectedKriteriaId = null;
+    setState(() {});
   }
 
   void _showSuccess(String message) {
@@ -182,14 +221,17 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
               labelText: 'Pilih Kriteria',
               border: OutlineInputBorder(),
             ),
-            items: _kriteriaList.map((kriteria) {
-              return DropdownMenuItem<int>(
-                value: kriteria['id'],
-                child: Text(
-                  kriteria['criteria_name'] ?? 'Kriteria ${kriteria['id']}',
-                ),
-              );
-            }).toList(),
+            items: _kriteriaList
+                .where((kriteria) => kriteria['id'] != 2 && kriteria['id'] != 3)
+                .map((kriteria) {
+                  return DropdownMenuItem<int>(
+                    value: kriteria['id'],
+                    child: Text(
+                      kriteria['criteria_name'] ?? 'Kriteria ${kriteria['id']}',
+                    ),
+                  );
+                })
+                .toList(),
             onChanged: (value) {
               setState(() {
                 _selectedKriteriaId = value;
@@ -202,6 +244,7 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
               return null;
             },
           ),
+
           const SizedBox(height: 10),
           TextFormField(
             controller: _nilaiController,
@@ -226,27 +269,97 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
     );
   }
 
-  Widget _buildNormalisasiList() {
-    if (_normalisasiList.isEmpty) {
-      return const Center(child: Text('Tidak ada data normalisasi'));
+  Widget _buildFilterProdukDropdown() {
+    return DropdownButtonFormField<String?>(
+      value: _filterProdukName,
+      decoration: const InputDecoration(
+        labelText: 'Filter Produk',
+        border: OutlineInputBorder(),
+      ),
+      items: [
+        const DropdownMenuItem<String?>(
+          value: null,
+          child: Text('Semua Produk'),
+        ),
+        ..._produkList.map((produk) {
+          final namaProduk = produk['name'] ?? 'Produk';
+          return DropdownMenuItem<String?>(
+            value: namaProduk,
+            child: Text(namaProduk),
+          );
+        }).toList(),
+      ],
+      onChanged: (value) {
+        setState(() {
+          _filterProdukName = value;
+        });
+      },
+    );
+  }
+
+  Widget _buildNormalisasiOriginalTable() {
+    if (_isLoadingOriginal) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_normalisasiOriginalList.isEmpty) {
+      return const Center(child: Text('Tidak ada data normalisasi original'));
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Daftar Normalisasi Nilai Awal',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-      ],
+    final filteredList = (_filterProdukName == null)
+        ? _normalisasiOriginalList
+        : _normalisasiOriginalList.where((item) {
+            final namaProduk = item['nama_produk'] ?? '';
+            return namaProduk == _filterProdukName;
+          }).toList();
+
+    if (filteredList.isEmpty) {
+      return const Center(child: Text('Data tidak ditemukan untuk produk ini'));
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Nama Produk')),
+          DataColumn(label: Text('Nama Kriteria')),
+          DataColumn(label: Text('Nilai')),
+        ],
+        rows: filteredList.map((item) {
+          return DataRow(
+            cells: [
+              DataCell(Text(item['nama_produk'] ?? '-')),
+              DataCell(Text(item['nama_kriteria'] ?? '-')),
+              DataCell(
+                Text(
+                  item['nilai'] != null
+                      ? (double.tryParse(
+                                  item['nilai'].toString(),
+                                )?.remainder(1) ==
+                                0
+                            ? double.tryParse(
+                                item['nilai'].toString(),
+                              )!.toInt().toString()
+                            : item['nilai'].toString())
+                      : '-',
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLoadingAny =
+        _isLoading ||
+        _isLoadingProduk ||
+        _isLoadingKriteria ||
+        _isLoadingOriginal;
+
     return Scaffold(
-      body: _isLoading || _isLoadingProduk || _isLoadingKriteria
+      body: isLoadingAny
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
@@ -259,7 +372,14 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
                     child: const Text('Simpan Normalisasi'),
                   ),
                   const SizedBox(height: 30),
-                  _buildNormalisasiList(),
+                  _buildFilterProdukDropdown(),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Data Normalisasi Nilai',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildNormalisasiOriginalTable(),
                 ],
               ),
             ),
