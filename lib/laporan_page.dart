@@ -22,6 +22,8 @@ class _LaporanPageState extends State<LaporanPage> {
       'https://bb3e9ca8413f.ngrok-free.app/criteria-weight';
   final String apiNilaiAkhir =
       'https://bb3e9ca8413f.ngrok-free.app/nilai-awal/result-saw';
+  final String apiNormalisasi =
+      'https://bb3e9ca8413f.ngrok-free.app/nilai-awal/normalisasi';
 
   @override
   void initState() {
@@ -161,9 +163,7 @@ class _LaporanPageState extends State<LaporanPage> {
                 (i) => [
                   (i + 1).toString(),
                   dataList[i]['nama'].toString(),
-                  (dataList[i]['nilai'] as num).toStringAsFixed(
-                    3,
-                  ), // Bulatkan 3 desimal
+                  (dataList[i]['nilai'] as num).toStringAsFixed(3),
                 ],
               ),
               border: pw.TableBorder.all(),
@@ -181,6 +181,135 @@ class _LaporanPageState extends State<LaporanPage> {
 
       final downloadsPath = "/storage/emulated/0/Download";
       final fileName = 'laporan_nilai_akhir_${now.millisecondsSinceEpoch}.pdf';
+      final filePath = '$downloadsPath/$fileName';
+      final file = File(filePath);
+
+      await file.writeAsBytes(await pdf.save());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Laporan berhasil diunduh: $fileName'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _downloadNormalisasiReport() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.get(Uri.parse(apiNormalisasi));
+      if (response.statusCode != 200) {
+        throw Exception('Gagal mengambil data normalisasi');
+      }
+
+      final List<dynamic> dataList = json.decode(response.body);
+      if (dataList.isEmpty) {
+        throw Exception('Data normalisasi kosong');
+      }
+
+      if (Platform.isAndroid) {
+        await _handleAndroidPermissions();
+      }
+
+      // Ambil keys dari objek pertama, kecuali 'nama'
+      final firstItem = dataList.first as Map<String, dynamic>;
+      final dynamicKeys = firstItem.keys.where((k) => k != 'nama').toList();
+
+      // Generate header: ['No', 'Nama', 'C1', 'C2', ...]
+      final headers = <String>['No', 'Nama'];
+      for (var i = 0; i < dynamicKeys.length; i++) {
+        headers.add('C${i + 1}');
+      }
+
+      // Bangun data rows, sesuai urutan keys
+      final dataRows = List<List<String>>.generate(dataList.length, (i) {
+        final item = dataList[i] as Map<String, dynamic>;
+        final row = <String>[];
+        row.add((i + 1).toString()); // No
+        row.add(item['nama'].toString()); // Nama
+        for (var key in dynamicKeys) {
+          final val = item[key];
+          if (val is num) {
+            row.add(val.toStringAsFixed(6));
+          } else {
+            row.add(val.toString());
+          }
+        }
+        return row;
+      });
+
+      final pdf = pw.Document();
+      final now = DateTime.now();
+      final hari = _getHariIndonesia(now);
+      final tanggal = '${now.day} ${_getBulanIndonesia(now.month)} ${now.year}';
+
+      pdf.addPage(
+        pw.MultiPage(
+          footer: (pw.Context context) {
+            return pw.Container(
+              alignment: pw.Alignment.centerRight,
+              margin: const pw.EdgeInsets.only(top: 50),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Text('Bogor, $hari $tanggal'),
+                  pw.SizedBox(height: 65),
+                  pw.Text(_username ?? ''),
+                ],
+              ),
+            );
+          },
+          build: (pw.Context context) => [
+            pw.Header(
+              level: 0,
+              child: pw.Text(
+                "Laporan Normalisasi",
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              'Dibuat : ${now.toString()}',
+              style: const pw.TextStyle(fontSize: 12),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Table.fromTextArray(
+              headers: headers,
+              data: dataRows,
+              border: pw.TableBorder.all(),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.centerLeft,
+            ),
+          ],
+        ),
+      );
+
+      final downloadsPath = "/storage/emulated/0/Download";
+      final fileName = 'laporan_normalisasi_${now.millisecondsSinceEpoch}.pdf';
       final filePath = '$downloadsPath/$fileName';
       final file = File(filePath);
 
@@ -371,57 +500,76 @@ class _LaporanPageState extends State<LaporanPage> {
                   Text('Mengunduh laporan...'),
                 ],
               )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: _downloadDimsumReport,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 15,
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _downloadDimsumReport,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 30,
+                          vertical: 15,
+                        ),
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
                       ),
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text(
-                      "Download Laporan Dimsum PDF",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _downloadCriteriaReport,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 15,
+                      child: const Text(
+                        "Download Laporan Dimsum PDF",
+                        style: TextStyle(fontSize: 16),
                       ),
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
                     ),
-                    child: const Text(
-                      "Download Laporan Kriteria PDF",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _downloadNilaiAkhirReport,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 15,
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _downloadCriteriaReport,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 30,
+                          vertical: 15,
+                        ),
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
                       ),
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
+                      child: const Text(
+                        "Download Laporan Kriteria PDF",
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
-                    child: const Text(
-                      "Download Laporan Nilai Akhir PDF",
-                      style: TextStyle(fontSize: 16),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _downloadNilaiAkhirReport,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 30,
+                          vertical: 15,
+                        ),
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text(
+                        "Download Laporan Nilai Akhir PDF",
+                        style: TextStyle(fontSize: 16),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _downloadNormalisasiReport,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 30,
+                          vertical: 15,
+                        ),
+                        backgroundColor: Colors.purple,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text(
+                        "Download Laporan Normalisasi PDF",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ],
+                ),
               ),
       ),
     );
