@@ -16,7 +16,9 @@ class LaporanPage extends StatefulWidget {
 class _LaporanPageState extends State<LaporanPage> {
   bool _isLoading = false;
   String? _username;
-  final String apiUrl = 'https://bb3e9ca8413f.ngrok-free.app/dimsum-variant';
+  final String apiDimsum = 'https://bb3e9ca8413f.ngrok-free.app/dimsum-variant';
+  final String apiCriteria =
+      'https://bb3e9ca8413f.ngrok-free.app/criteria-weight';
 
   @override
   void initState() {
@@ -29,7 +31,6 @@ class _LaporanPageState extends State<LaporanPage> {
     setState(() {
       _username = username;
     });
-    print('Username loaded: $_username');
   }
 
   String _getHariIndonesia(DateTime date) {
@@ -64,19 +65,54 @@ class _LaporanPageState extends State<LaporanPage> {
   }
 
   Future<void> _downloadDimsumReport() async {
+    await _generatePdfReport(
+      url: apiDimsum,
+      title: "Laporan Dimsum",
+      tableHeaders: ['No', 'Nama Dimsum', 'Modal (Rp)', 'Profit (Rp)'],
+      rowBuilder: (data, index) => [
+        (index + 1).toString(),
+        data['name'].toString(),
+        data['modal'].toString(),
+        data['profit'].toString(),
+      ],
+      filePrefix: "laporan_dimsum",
+    );
+  }
+
+  Future<void> _downloadCriteriaReport() async {
+    await _generatePdfReport(
+      url: apiCriteria,
+      title: "Laporan Kriteria",
+      tableHeaders: ['No', 'Nama Kriteria', 'Bobot'],
+      rowBuilder: (data, index) => [
+        (index + 1).toString(),
+        data['criteria_name'].toString(),
+        data['weight'].toString(),
+      ],
+      filePrefix: "laporan_kriteria",
+    );
+  }
+
+  Future<void> _generatePdfReport({
+    required String url,
+    required String title,
+    required List<String> tableHeaders,
+    required List<String> Function(dynamic data, int index) rowBuilder,
+    required String filePrefix,
+  }) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final response = await http.get(Uri.parse(apiUrl));
+      final response = await http.get(Uri.parse(url));
       if (response.statusCode != 200) {
-        throw Exception('Failed to fetch dimsum data');
+        throw Exception('Gagal mengambil data');
       }
 
-      final List<dynamic> dimsumData = json.decode(response.body);
-      if (dimsumData.isEmpty) {
-        throw Exception('No dimsum data available');
+      final List<dynamic> dataList = json.decode(response.body);
+      if (dataList.isEmpty) {
+        throw Exception('Data kosong');
       }
 
       if (Platform.isAndroid) {
@@ -108,7 +144,7 @@ class _LaporanPageState extends State<LaporanPage> {
             pw.Header(
               level: 0,
               child: pw.Text(
-                'Laporan Dimsum',
+                title,
                 style: pw.TextStyle(
                   fontSize: 24,
                   fontWeight: pw.FontWeight.bold,
@@ -122,23 +158,10 @@ class _LaporanPageState extends State<LaporanPage> {
             ),
             pw.SizedBox(height: 20),
             pw.Table.fromTextArray(
-              headers: [
-                'No',
-                'Nama Dimsum',
-                'Modal (Rp)',
-                'Profit (Rp)',
-                'Total (Rp)',
-              ],
+              headers: tableHeaders,
               data: List<List<String>>.generate(
-                dimsumData.length,
-                (index) => [
-                  (index + 1).toString(),
-                  dimsumData[index]['name'].toString(),
-                  dimsumData[index]['modal'].toString(),
-                  dimsumData[index]['profit'].toString(),
-                  (dimsumData[index]['modal'] + dimsumData[index]['profit'])
-                      .toString(),
-                ],
+                dataList.length,
+                (i) => rowBuilder(dataList[i], i),
               ),
               border: pw.TableBorder.all(),
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
@@ -149,7 +172,7 @@ class _LaporanPageState extends State<LaporanPage> {
       );
 
       final downloadsPath = "/storage/emulated/0/Download";
-      final fileName = 'laporan_dimsum_${now.millisecondsSinceEpoch}.pdf';
+      final fileName = '${filePrefix}_${now.millisecondsSinceEpoch}.pdf';
       final filePath = '$downloadsPath/$fileName';
       final file = File(filePath);
 
@@ -184,22 +207,19 @@ class _LaporanPageState extends State<LaporanPage> {
   Future<void> _handleAndroidPermissions() async {
     if (Platform.isAndroid) {
       final androidVersion = await _getAndroidVersion();
-
       if (androidVersion >= 30) {
         var manageStatus = await Permission.manageExternalStorage.status;
         if (!manageStatus.isGranted) {
           manageStatus = await Permission.manageExternalStorage.request();
-          if (!manageStatus.isGranted) {
+          if (!manageStatus.isGranted)
             throw Exception("Izin Manage External Storage ditolak");
-          }
         }
       } else {
         var storageStatus = await Permission.storage.status;
         if (!storageStatus.isGranted) {
           storageStatus = await Permission.storage.request();
-          if (!storageStatus.isGranted) {
+          if (!storageStatus.isGranted)
             throw Exception("Izin penyimpanan ditolak");
-          }
         }
       }
     }
@@ -211,9 +231,7 @@ class _LaporanPageState extends State<LaporanPage> {
       if (await file.exists()) {
         final content = await file.readAsString();
         final match = RegExp(r'ro.build.version.sdk=(\d+)').firstMatch(content);
-        if (match != null) {
-          return int.parse(match.group(1)!);
-        }
+        if (match != null) return int.parse(match.group(1)!);
       }
     } catch (_) {}
     return 30;
@@ -229,23 +247,44 @@ class _LaporanPageState extends State<LaporanPage> {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 20),
-                  Text('Mengunduh data dimsum...'),
+                  Text('Mengunduh laporan...'),
                 ],
               )
-            : ElevatedButton(
-                onPressed: _downloadDimsumReport,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 15,
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _downloadDimsumReport,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 30,
+                        vertical: 15,
+                      ),
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text(
+                      "Download Laporan Dimsum PDF",
+                      style: TextStyle(fontSize: 16),
+                    ),
                   ),
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text(
-                  "Download Laporan Dimsum PDF",
-                  style: TextStyle(fontSize: 16),
-                ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _downloadCriteriaReport,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 30,
+                        vertical: 15,
+                      ),
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text(
+                      "Download Laporan Kriteria PDF",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ],
               ),
       ),
     );
