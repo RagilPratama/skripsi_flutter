@@ -95,10 +95,6 @@ class _MyHomePageState extends State<MyHomePage> {
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 20),
-          Text(
-            'Home Page',
-            style: TextStyle(fontSize: 18, color: Colors.black),
-          ),
         ],
       ),
     ),
