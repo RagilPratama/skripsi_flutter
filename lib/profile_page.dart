@@ -61,10 +61,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    '$_username@dimsumgerobak.com',
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
                   const SizedBox(height: 30),
                   Card(
                     child: ListTile(
@@ -74,13 +70,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.email_outlined),
-                      title: const Text('Email'),
-                      subtitle: Text('$_username@dimsumgerobak.com'),
-                    ),
-                  ),
                   const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
