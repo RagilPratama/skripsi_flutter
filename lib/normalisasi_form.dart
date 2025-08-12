@@ -27,12 +27,19 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
   bool _isLoadingKriteria = true;
   bool _isLoadingOriginal = true;
 
-  // Filter nama produk untuk tabel
+  // Filter nama produk untuk tabel normalisasi original
   String? _filterProdukName;
 
-  // Pagination variables
-  int _currentPage = 0;
-  final int _rowsPerPage = 10;
+  // Pagination variables for original normalisasi table
+  int _currentPageOriginal = 0;
+  final int _rowsPerPageOriginal = 5;
+
+  // Data & pagination untuk dynamic normalisasi (nilai-awal/normalisasi)
+  List<Map<String, dynamic>> _normalisasiDynamicData = [];
+  bool _isLoadingDynamic = true;
+  int _currentPageDynamic = 0;
+  final int _rowsPerPageDynamic = 5;
+  List<String> _dynamicColumns = [];
 
   final String normalisasiApiUrl =
       'https://8f9f6e2f555e.ngrok-free.app/nilai-awal';
@@ -42,6 +49,9 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
       'https://8f9f6e2f555e.ngrok-free.app/criteria-weight';
   final String normalisasiOriginalApiUrl =
       'https://8f9f6e2f555e.ngrok-free.app/nilai-awal/original';
+
+  final String normalisasiDynamicApiUrl =
+      'https://8f9f6e2f555e.ngrok-free.app/nilai-awal/normalisasi';
 
   @override
   void initState() {
@@ -55,6 +65,7 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
       _loadKriteriaData(),
       _loadNormalisasiData(),
       _loadNormalisasiOriginalData(),
+      _loadNormalisasiDynamicData(),
     ]);
   }
 
@@ -136,6 +147,36 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
       setState(() => _isLoadingOriginal = false);
       _showError('Error load data normalisasi original: $e');
     }
+  }
+
+  Future<void> _loadNormalisasiDynamicData() async {
+    setState(() => _isLoadingDynamic = true);
+    try {
+      final response = await http.get(Uri.parse(normalisasiDynamicApiUrl));
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        if (decoded is List && decoded.isNotEmpty) {
+          _normalisasiDynamicData = List<Map<String, dynamic>>.from(decoded);
+          // Ambil keys selain 'nama'
+          final firstItem = _normalisasiDynamicData.first;
+          _dynamicColumns = firstItem.keys.where((k) => k != 'nama').toList();
+        } else {
+          _normalisasiDynamicData = [];
+          _dynamicColumns = [];
+        }
+      } else {
+        _normalisasiDynamicData = [];
+        _dynamicColumns = [];
+        _showError(
+          'Gagal load data normalisasi dynamic (status: ${response.statusCode})',
+        );
+      }
+    } catch (e) {
+      _normalisasiDynamicData = [];
+      _dynamicColumns = [];
+      _showError('Error load normalisasi dynamic: $e');
+    }
+    setState(() => _isLoadingDynamic = false);
   }
 
   Future<void> _saveNormalisasi() async {
@@ -295,7 +336,7 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
       onChanged: (value) {
         setState(() {
           _filterProdukName = value;
-          _currentPage = 0; // reset halaman saat filter berubah
+          _currentPageOriginal = 0; // reset page pada tabel original
         });
       },
     );
@@ -320,11 +361,10 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
       return const Center(child: Text('Data tidak ditemukan untuk produk ini'));
     }
 
-    // Hitung range data yang akan ditampilkan sesuai halaman
-    final startIndex = _currentPage * 5;
-    final endIndex = (startIndex + 5) > filteredList.length
+    final startIndex = _currentPageOriginal * _rowsPerPageOriginal;
+    final endIndex = (startIndex + _rowsPerPageOriginal) > filteredList.length
         ? filteredList.length
-        : startIndex + 5;
+        : startIndex + _rowsPerPageOriginal;
 
     final pageItems = filteredList.sublist(startIndex, endIndex);
 
@@ -334,7 +374,7 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
           scrollDirection: Axis.horizontal,
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey), // border luar tabel
+              border: Border.all(color: Colors.grey),
               borderRadius: BorderRadius.circular(4),
             ),
             child: DataTable(
@@ -373,15 +413,14 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
           ),
         ),
         const SizedBox(height: 10),
-        // Pagination controls
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ElevatedButton(
-              onPressed: _currentPage > 0
+              onPressed: _currentPageOriginal > 0
                   ? () {
                       setState(() {
-                        _currentPage--;
+                        _currentPageOriginal--;
                       });
                     }
                   : null,
@@ -389,14 +428,109 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
             ),
             const SizedBox(width: 20),
             Text(
-              'Page ${_currentPage + 1} of ${((filteredList.length - 1) / 5 + 1).toInt()}',
+              'Page ${_currentPageOriginal + 1} of ${((_normalisasiOriginalList.length - 1) / _rowsPerPageOriginal + 1).toInt()}',
             ),
             const SizedBox(width: 20),
             ElevatedButton(
               onPressed: endIndex < filteredList.length
                   ? () {
                       setState(() {
-                        _currentPage++;
+                        _currentPageOriginal++;
+                      });
+                    }
+                  : null,
+              child: const Text('Next'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNormalisasiDynamicTable() {
+    if (_isLoadingDynamic) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_normalisasiDynamicData.isEmpty) {
+      return const Center(child: Text('Tidak ada data normalisasi'));
+    }
+
+    final startIndex = _currentPageDynamic * _rowsPerPageDynamic;
+    final endIndex =
+        (startIndex + _rowsPerPageDynamic) > _normalisasiDynamicData.length
+        ? _normalisasiDynamicData.length
+        : startIndex + _rowsPerPageDynamic;
+
+    final pageItems = _normalisasiDynamicData.sublist(startIndex, endIndex);
+
+    return Column(
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: DataTable(
+              headingRowColor: MaterialStateColor.resolveWith(
+                (states) => Colors.grey.shade200,
+              ),
+              dividerThickness: 1,
+              columns: [
+                const DataColumn(label: Text('Nama Produk')),
+                ...List.generate(
+                  _dynamicColumns.length,
+                  (index) => DataColumn(label: Text('C${index + 1}')),
+                ),
+              ],
+              rows: pageItems.map((item) {
+                return DataRow(
+                  cells: [
+                    DataCell(Text(item['nama'] ?? '-')),
+                    ..._dynamicColumns.map((col) {
+                      final val = item[col];
+                      if (val == null) return const DataCell(Text('-'));
+
+                      if (val is num) {
+                        if (val % 1 == 0) {
+                          return DataCell(Text(val.toInt().toString()));
+                        } else {
+                          return DataCell(Text(val.toStringAsFixed(4)));
+                        }
+                      }
+                      return DataCell(Text(val.toString()));
+                    }).toList(),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: _currentPageDynamic > 0
+                  ? () {
+                      setState(() {
+                        _currentPageDynamic--;
+                      });
+                    }
+                  : null,
+              child: const Text('Previous'),
+            ),
+            const SizedBox(width: 20),
+            Text(
+              'Page ${_currentPageDynamic + 1} of ${((_normalisasiDynamicData.length - 1) / _rowsPerPageDynamic + 1).toInt()}',
+            ),
+            const SizedBox(width: 20),
+            ElevatedButton(
+              onPressed: endIndex < _normalisasiDynamicData.length
+                  ? () {
+                      setState(() {
+                        _currentPageDynamic++;
                       });
                     }
                   : null,
@@ -414,7 +548,8 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
         _isLoading ||
         _isLoadingProduk ||
         _isLoadingKriteria ||
-        _isLoadingOriginal;
+        _isLoadingOriginal ||
+        _isLoadingDynamic;
 
     return Scaffold(
       body: isLoadingAny
@@ -438,6 +573,13 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
                   ),
                   const SizedBox(height: 10),
                   _buildNormalisasiOriginalTable(),
+                  const SizedBox(height: 40),
+                  const Text(
+                    'Data Hasil Normalisasi',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  _buildNormalisasiDynamicTable(),
                 ],
               ),
             ),
