@@ -17,13 +17,13 @@ class _LaporanPageState extends State<LaporanPage> {
   bool _isLoading = false;
   String? _username;
 
-  final String apiDimsum = 'https://bb3e9ca8413f.ngrok-free.app/dimsum-variant';
+  final String apiDimsum = 'https://8f9f6e2f555e.ngrok-free.app/dimsum-variant';
   final String apiCriteria =
-      'https://bb3e9ca8413f.ngrok-free.app/criteria-weight';
+      'https://8f9f6e2f555e.ngrok-free.app/criteria-weight';
   final String apiNilaiAkhir =
-      'https://bb3e9ca8413f.ngrok-free.app/nilai-awal/result-saw';
+      'https://8f9f6e2f555e.ngrok-free.app/nilai-awal/result-saw';
   final String apiNormalisasi =
-      'https://bb3e9ca8413f.ngrok-free.app/nilai-awal/normalisasi';
+      'https://8f9f6e2f555e.ngrok-free.app/nilai-awal/normalisasi';
 
   @override
   void initState() {
@@ -99,117 +99,23 @@ class _LaporanPageState extends State<LaporanPage> {
   }
 
   Future<void> _downloadNilaiAkhirReport() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final response = await http.get(Uri.parse(apiNilaiAkhir));
-      if (response.statusCode != 200) {
-        throw Exception('Gagal mengambil data');
-      }
-
-      List<dynamic> dataList = json.decode(response.body);
-
-      // Urutkan berdasarkan nilai tertinggi
-      dataList.sort((a, b) => (b['nilai'] as num).compareTo(a['nilai'] as num));
-
-      if (Platform.isAndroid) {
-        await _handleAndroidPermissions();
-      }
-
-      final pdf = pw.Document();
-      final now = DateTime.now();
-      final hari = _getHariIndonesia(now);
-      final tanggal = '${now.day} ${_getBulanIndonesia(now.month)} ${now.year}';
-
-      pdf.addPage(
-        pw.MultiPage(
-          footer: (pw.Context context) {
-            return pw.Container(
-              alignment: pw.Alignment.centerRight,
-              margin: const pw.EdgeInsets.only(top: 50),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
-                children: [
-                  pw.Text('Bogor, $hari $tanggal'),
-                  pw.SizedBox(height: 65),
-                  pw.Text(_username ?? ''),
-                ],
-              ),
-            );
-          },
-          build: (pw.Context context) => [
-            pw.Header(
-              level: 0,
-              child: pw.Text(
-                "Laporan Nilai Akhir",
-                style: pw.TextStyle(
-                  fontSize: 24,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-            ),
-            pw.SizedBox(height: 20),
-            pw.Text(
-              'Dibuat : ${now.toString()}',
-              style: const pw.TextStyle(fontSize: 12),
-            ),
-            pw.SizedBox(height: 20),
-            pw.Table.fromTextArray(
-              headers: ['No', 'Nama', 'Nilai Akhir'],
-              data: List<List<String>>.generate(
-                dataList.length,
-                (i) => [
-                  (i + 1).toString(),
-                  dataList[i]['nama'].toString(),
-                  (dataList[i]['nilai'] as num).toStringAsFixed(3),
-                ],
-              ),
-              border: pw.TableBorder.all(),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              cellAlignment: pw.Alignment.centerLeft,
-            ),
-            pw.SizedBox(height: 20),
-            pw.Text(
-              "Data ini diurutkan sesuai nilai akhir",
-              style: pw.TextStyle(fontSize: 12, fontStyle: pw.FontStyle.italic),
-            ),
-          ],
-        ),
-      );
-
-      final downloadsPath = "/storage/emulated/0/Download";
-      final fileName = 'laporan_nilai_akhir_${now.millisecondsSinceEpoch}.pdf';
-      final filePath = '$downloadsPath/$fileName';
-      final file = File(filePath);
-
-      await file.writeAsBytes(await pdf.save());
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Laporan berhasil diunduh: $fileName'),
-            backgroundColor: Colors.green,
-          ),
+    await _generatePdfReport(
+      url: apiNilaiAkhir,
+      title: "Laporan Nilai Akhir",
+      tableHeaders: ['No', 'Nama', 'Nilai Akhir'],
+      rowBuilder: (data, index) => [
+        (index + 1).toString(),
+        data['nama'].toString(),
+        (data['nilai'] as num).toStringAsFixed(3),
+      ],
+      filePrefix: "laporan_nilai_akhir",
+      beforeBuild: (dataList) {
+        dataList.sort(
+          (a, b) => (b['nilai'] as num).compareTo(a['nilai'] as num),
         );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+        return dataList;
+      },
+    );
   }
 
   Future<void> _downloadNormalisasiReport() async {
@@ -232,22 +138,19 @@ class _LaporanPageState extends State<LaporanPage> {
         await _handleAndroidPermissions();
       }
 
-      // Ambil keys dari objek pertama, kecuali 'nama'
       final firstItem = dataList.first as Map<String, dynamic>;
       final dynamicKeys = firstItem.keys.where((k) => k != 'nama').toList();
 
-      // Generate header: ['No', 'Nama', 'C1', 'C2', ...]
       final headers = <String>['No', 'Nama'];
       for (var i = 0; i < dynamicKeys.length; i++) {
         headers.add('C${i + 1}');
       }
 
-      // Bangun data rows, sesuai urutan keys
       final dataRows = List<List<String>>.generate(dataList.length, (i) {
         final item = dataList[i] as Map<String, dynamic>;
         final row = <String>[];
-        row.add((i + 1).toString()); // No
-        row.add(item['nama'].toString()); // Nama
+        row.add((i + 1).toString());
+        row.add(item['nama'].toString());
         for (var key in dynamicKeys) {
           final val = item[key];
           if (val is num) {
@@ -274,8 +177,9 @@ class _LaporanPageState extends State<LaporanPage> {
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
                   pw.Text('Bogor, $hari $tanggal'),
-                  pw.SizedBox(height: 65),
                   pw.Text(_username ?? ''),
+                  pw.SizedBox(height: 60), // space untuk tanda tangan
+                  pw.Text('M Ragil Pratama'),
                 ],
               ),
             );
@@ -347,6 +251,7 @@ class _LaporanPageState extends State<LaporanPage> {
     required List<String> tableHeaders,
     required List<String> Function(dynamic data, int index) rowBuilder,
     required String filePrefix,
+    List<dynamic> Function(List<dynamic>)? beforeBuild,
   }) async {
     setState(() {
       _isLoading = true;
@@ -358,9 +263,13 @@ class _LaporanPageState extends State<LaporanPage> {
         throw Exception('Gagal mengambil data');
       }
 
-      final List<dynamic> dataList = json.decode(response.body);
+      List<dynamic> dataList = json.decode(response.body);
       if (dataList.isEmpty) {
         throw Exception('Data kosong');
+      }
+
+      if (beforeBuild != null) {
+        dataList = beforeBuild(dataList);
       }
 
       if (Platform.isAndroid) {
@@ -382,8 +291,9 @@ class _LaporanPageState extends State<LaporanPage> {
                 crossAxisAlignment: pw.CrossAxisAlignment.end,
                 children: [
                   pw.Text('Bogor, $hari $tanggal'),
-                  pw.SizedBox(height: 65),
                   pw.Text(_username ?? ''),
+                  pw.SizedBox(height: 60), // space untuk tanda tangan
+                  pw.Text('M Ragil Pratama'),
                 ],
               ),
             );

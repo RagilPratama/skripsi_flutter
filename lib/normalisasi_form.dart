@@ -31,13 +31,13 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
   String? _filterProdukName;
 
   final String normalisasiApiUrl =
-      'https://bb3e9ca8413f.ngrok-free.app/nilai-awal';
+      'https://8f9f6e2f555e.ngrok-free.app/nilai-awal';
   final String produkApiUrl =
-      'https://bb3e9ca8413f.ngrok-free.app/dimsum-variant';
+      'https://8f9f6e2f555e.ngrok-free.app/dimsum-variant';
   final String kriteriaApiUrl =
-      'https://bb3e9ca8413f.ngrok-free.app/criteria-weight';
+      'https://8f9f6e2f555e.ngrok-free.app/criteria-weight';
   final String normalisasiOriginalApiUrl =
-      'https://bb3e9ca8413f.ngrok-free.app/nilai-awal/original';
+      'https://8f9f6e2f555e.ngrok-free.app/nilai-awal/original';
 
   @override
   void initState() {

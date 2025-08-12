@@ -1,6 +1,6 @@
 class ApiConfig {
   // Centralized API configuration
-  static const String baseUrl = 'https://bb3e9ca8413f.ngrok-free.app';
+  static const String baseUrl = 'https://8f9f6e2f555e.ngrok-free.app';
 
   // API Endpoints
   static const String login = '/user/login';
