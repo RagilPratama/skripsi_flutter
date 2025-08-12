@@ -30,6 +30,10 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
   // Filter nama produk untuk tabel
   String? _filterProdukName;
 
+  // Pagination variables
+  int _currentPage = 0;
+  final int _rowsPerPage = 10;
+
   final String normalisasiApiUrl =
       'https://8f9f6e2f555e.ngrok-free.app/nilai-awal';
   final String produkApiUrl =
@@ -244,7 +248,6 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
               return null;
             },
           ),
-
           const SizedBox(height: 10),
           TextFormField(
             controller: _nilaiController,
@@ -292,6 +295,7 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
       onChanged: (value) {
         setState(() {
           _filterProdukName = value;
+          _currentPage = 0; // reset halaman saat filter berubah
         });
       },
     );
@@ -316,37 +320,91 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
       return const Center(child: Text('Data tidak ditemukan untuk produk ini'));
     }
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Nama Produk')),
-          DataColumn(label: Text('Nama Kriteria')),
-          DataColumn(label: Text('Nilai')),
-        ],
-        rows: filteredList.map((item) {
-          return DataRow(
-            cells: [
-              DataCell(Text(item['nama_produk'] ?? '-')),
-              DataCell(Text(item['nama_kriteria'] ?? '-')),
-              DataCell(
-                Text(
-                  item['nilai'] != null
-                      ? (double.tryParse(
-                                  item['nilai'].toString(),
-                                )?.remainder(1) ==
-                                0
-                            ? double.tryParse(
-                                item['nilai'].toString(),
-                              )!.toInt().toString()
-                            : item['nilai'].toString())
-                      : '-',
-                ),
+    // Hitung range data yang akan ditampilkan sesuai halaman
+    final startIndex = _currentPage * 5;
+    final endIndex = (startIndex + 5) > filteredList.length
+        ? filteredList.length
+        : startIndex + 5;
+
+    final pageItems = filteredList.sublist(startIndex, endIndex);
+
+    return Column(
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey), // border luar tabel
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: DataTable(
+              headingRowColor: MaterialStateColor.resolveWith(
+                (states) => Colors.grey.shade200,
               ),
-            ],
-          );
-        }).toList(),
-      ),
+              dividerThickness: 1,
+              columns: const [
+                DataColumn(label: Text('Nama Produk'), numeric: false),
+                DataColumn(label: Text('Nama Kriteria'), numeric: false),
+                DataColumn(label: Text('Nilai'), numeric: true),
+              ],
+              rows: pageItems.map((item) {
+                return DataRow(
+                  cells: [
+                    DataCell(Text(item['nama_produk'] ?? '-')),
+                    DataCell(Text(item['nama_kriteria'] ?? '-')),
+                    DataCell(
+                      Text(
+                        item['nilai'] != null
+                            ? (double.tryParse(
+                                        item['nilai'].toString(),
+                                      )?.remainder(1) ==
+                                      0
+                                  ? double.tryParse(
+                                      item['nilai'].toString(),
+                                    )!.toInt().toString()
+                                  : item['nilai'].toString())
+                            : '-',
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Pagination controls
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: _currentPage > 0
+                  ? () {
+                      setState(() {
+                        _currentPage--;
+                      });
+                    }
+                  : null,
+              child: const Text('Previous'),
+            ),
+            const SizedBox(width: 20),
+            Text(
+              'Page ${_currentPage + 1} of ${((filteredList.length - 1) / 5 + 1).toInt()}',
+            ),
+            const SizedBox(width: 20),
+            ElevatedButton(
+              onPressed: endIndex < filteredList.length
+                  ? () {
+                      setState(() {
+                        _currentPage++;
+                      });
+                    }
+                  : null,
+              child: const Text('Next'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
