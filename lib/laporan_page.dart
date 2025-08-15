@@ -17,13 +17,13 @@ class _LaporanPageState extends State<LaporanPage> {
   bool _isLoading = false;
   String? _username;
 
-  final String apiDimsum = 'https://8f9f6e2f555e.ngrok-free.app/dimsum-variant';
+  final String apiDimsum = 'https://d610b2f70ae5.ngrok-free.app/dimsum-variant';
   final String apiCriteria =
-      'https://8f9f6e2f555e.ngrok-free.app/criteria-weight';
+      'https://d610b2f70ae5.ngrok-free.app/criteria-weight';
   final String apiNilaiAkhir =
-      'https://8f9f6e2f555e.ngrok-free.app/nilai-awal/result-saw';
+      'https://d610b2f70ae5.ngrok-free.app/nilai-awal/result-saw';
   final String apiNormalisasi =
-      'https://8f9f6e2f555e.ngrok-free.app/nilai-awal/normalisasi';
+      'https://d610b2f70ae5.ngrok-free.app/nilai-awal/normalisasi';
 
   @override
   void initState() {
@@ -171,15 +171,16 @@ class _LaporanPageState extends State<LaporanPage> {
         pw.MultiPage(
           footer: (pw.Context context) {
             return pw.Container(
-              alignment: pw.Alignment.centerRight,
+              alignment: pw.Alignment.centerRight, // tetap di kanan halaman
               margin: const pw.EdgeInsets.only(top: 50),
               child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                crossAxisAlignment:
+                    pw.CrossAxisAlignment.center, // semua isi rata tengah
                 children: [
-                  pw.Text('Bogor, $hari $tanggal'),
+                  pw.Text('Jakarta, $hari $tanggal'),
                   pw.Text(_username ?? ''),
-                  pw.SizedBox(height: 60), // space untuk tanda tangan
-                  pw.Text('M Ragil Pratama'),
+                  pw.SizedBox(height: 60), // jarak untuk tanda tangan
+                  pw.Text('Muhamad Ragil Pratama'),
                 ],
               ),
             );
@@ -259,6 +260,7 @@ class _LaporanPageState extends State<LaporanPage> {
 
     try {
       final response = await http.get(Uri.parse(url));
+      print(response.body);
       if (response.statusCode != 200) {
         throw Exception('Gagal mengambil data');
       }
@@ -285,15 +287,16 @@ class _LaporanPageState extends State<LaporanPage> {
         pw.MultiPage(
           footer: (pw.Context context) {
             return pw.Container(
-              alignment: pw.Alignment.centerRight,
+              alignment: pw.Alignment.centerRight, // tetap di kanan halaman
               margin: const pw.EdgeInsets.only(top: 50),
               child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                crossAxisAlignment:
+                    pw.CrossAxisAlignment.center, // semua isi rata tengah
                 children: [
-                  pw.Text('Bogor, $hari $tanggal'),
+                  pw.Text('Jakarta, $hari $tanggal'),
                   pw.Text(_username ?? ''),
-                  pw.SizedBox(height: 60), // space untuk tanda tangan
-                  pw.Text('M Ragil Pratama'),
+                  pw.SizedBox(height: 60), // jarak untuk tanda tangan
+                  pw.Text('Muhamad Ragil Pratama'),
                 ],
               ),
             );

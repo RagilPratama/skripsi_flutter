@@ -42,16 +42,16 @@ class _NormalisasiFormState extends State<NormalisasiForm> {
   List<String> _dynamicColumns = [];
 
   final String normalisasiApiUrl =
-      'https://8f9f6e2f555e.ngrok-free.app/nilai-awal';
+      'https://d610b2f70ae5.ngrok-free.app/nilai-awal';
   final String produkApiUrl =
-      'https://8f9f6e2f555e.ngrok-free.app/dimsum-variant';
+      'https://d610b2f70ae5.ngrok-free.app/dimsum-variant';
   final String kriteriaApiUrl =
-      'https://8f9f6e2f555e.ngrok-free.app/criteria-weight';
+      'https://d610b2f70ae5.ngrok-free.app/criteria-weight';
   final String normalisasiOriginalApiUrl =
-      'https://8f9f6e2f555e.ngrok-free.app/nilai-awal/original';
+      'https://d610b2f70ae5.ngrok-free.app/nilai-awal/original';
 
   final String normalisasiDynamicApiUrl =
-      'https://8f9f6e2f555e.ngrok-free.app/nilai-awal/normalisasi';
+      'https://d610b2f70ae5.ngrok-free.app/nilai-awal/normalisasi';
 
   @override
   void initState() {
